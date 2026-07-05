@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -9,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB
-const MONGODB_URI = 'mongodb+srv://interskillsolutions:interskillsolutions@cluster0.wuzmtku.mongodb.net/attendance?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI;
 
 const bcrypt = require('bcryptjs');
 const User = require('./models/User');
