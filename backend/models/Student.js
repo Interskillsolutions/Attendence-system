@@ -9,6 +9,11 @@ const studentSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  teacher: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   dateOfJoining: {
     type: Date,
     required: true,

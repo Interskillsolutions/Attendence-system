@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { FiCheck, FiX, FiUmbrella, FiMinusCircle, FiRotateCcw } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { FiCheck, FiX, FiUmbrella, FiMinusCircle, FiArrowLeft, FiRotateCcw } from 'react-icons/fi';
+import { useParams, useNavigate } from 'react-router-dom';
 import Modal from './Modal';
 
-const Dashboard = ({ user }) => {
+const TeacherDashboard = () => {
+  const { teacherId } = useParams();
   const navigate = useNavigate();
-  const [teachers, setTeachers] = useState([]);
+  
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState([]);
+  const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
   
   // Modal state
@@ -24,23 +26,22 @@ const Dashboard = ({ user }) => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [teacherId]);
 
   const fetchData = async () => {
     try {
-      if (user?.role === 'Admin') {
-        const res = await axios.get('/api/users');
-        setTeachers(res.data.filter(u => u.role === 'Teacher'));
-      } else {
-        const [studentsRes, attendanceRes] = await Promise.all([
-          axios.get('/api/students'),
-          axios.get(`/api/attendance/date/${todayStr}`)
-        ]);
-        setStudents(studentsRes.data);
-        setAttendance(attendanceRes.data);
-      }
+      const [studentsRes, attendanceRes, usersRes] = await Promise.all([
+        axios.get(`/api/students?teacherId=${teacherId}`),
+        axios.get(`/api/attendance/date/${todayStr}?teacherId=${teacherId}`),
+        axios.get('/api/users')
+      ]);
+      setStudents(studentsRes.data);
+      setAttendance(attendanceRes.data);
+      const foundTeacher = usersRes.data.find(u => u._id === teacherId);
+      if (foundTeacher) setTeacher(foundTeacher);
     } catch (err) {
       console.error(err);
+      setError('Failed to fetch data.');
     } finally {
       setLoading(false);
     }
@@ -144,55 +145,22 @@ const Dashboard = ({ user }) => {
     return a.localeCompare(b);
   });
 
-  if (user?.role === 'Admin') {
-    return (
-      <div className="animate-fade-in">
-        <div className="page-title">
-          <span>Teacher Dashboards</span>
-        </div>
-        <div className="glass-panel">
-          {teachers.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px' }}>No teachers found.</div>
-          ) : (
-            <table className="glass-table">
-              <thead>
-                <tr>
-                  <th>Teacher Name</th>
-                  <th>Email</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teachers.map(t => (
-                  <tr key={t._id}>
-                    <td style={{ fontWeight: 500 }}>{t.name}</td>
-                    <td style={{ color: 'var(--text-muted)' }}>{t.email}</td>
-                    <td>
-                      <button className="btn btn-outline" style={{ padding: '6px 12px' }} onClick={() => navigate(`/teacher/${t._id}/dashboard`)}>
-                        View Classes & Attendance
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="animate-fade-in">
-      <div className="page-title">
-        <span>Today's Attendance</span>
-        <span style={{ fontSize: '18px', color: 'var(--primary)', backgroundColor: 'var(--glass-bg)', padding: '8px 16px', borderRadius: '20px' }}>
-          {displayDate}
-        </span>
+      <div className="flex items-center gap-4 mb-6">
+        <button className="btn btn-outline" onClick={() => navigate(-1)} style={{ padding: '8px 12px' }}>
+          <FiArrowLeft /> Back
+        </button>
+        <div className="page-title" style={{ marginBottom: 0 }}>
+          <span>{teacher ? `${teacher.name}'s Classes` : "Teacher's Classes"}</span>
+          <span style={{ fontSize: '18px', color: 'var(--primary)', backgroundColor: 'var(--glass-bg)', padding: '8px 16px', borderRadius: '20px', marginLeft: '16px' }}>
+            {displayDate}
+          </span>
+        </div>
       </div>
 
       {Object.keys(groupedStudents).length === 0 ? (
-        <div className="glass-panel" style={{ textAlign: 'center', padding: '24px' }}>No students found. Add one first.</div>
+        <div className="glass-panel" style={{ textAlign: 'center', padding: '24px' }}>No students found for this teacher.</div>
       ) : (
         courseNames.map(course => (
           <div key={course} className="glass-panel" style={{ marginBottom: '24px' }}>
@@ -283,4 +251,4 @@ const Dashboard = ({ user }) => {
   );
 };
 
-export default Dashboard;
+export default TeacherDashboard;
